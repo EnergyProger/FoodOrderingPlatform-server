@@ -70,4 +70,21 @@ const searchRestaurant = async (request: Request, response: Response) => {
   }
 };
 
-export default { searchRestaurant };
+const getRestaurant = async (request: Request, response: Response) => {
+  try {
+    const restaurantId = request.params.restaurantId;
+
+    const restaurant = await Restaurant.findById(restaurantId);
+
+    if (!restaurant) {
+      return response.status(404).json({ message: "Restaurant not found" });
+    }
+
+    response.json(restaurant);
+  } catch (error) {
+    console.log(error);
+    response.status(500).json({ message: "Error fetching restaurant" });
+  }
+};
+
+export default { searchRestaurant, getRestaurant };
