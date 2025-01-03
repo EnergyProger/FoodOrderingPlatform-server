@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import Restaurant from "../models/restaurant";
 import cloudinary from "cloudinary";
 import mongoose from "mongoose";
+import Order from "../models/order";
 
 const getMyRestaurant = async (request: Request, response: Response) => {
   try {
@@ -79,6 +80,52 @@ const updateMyRestaurant = async (request: Request, response: Response) => {
   }
 };
 
+const getMyRestaurantOrders = async (request: Request, response: Response) => {
+  try {
+    const restaurant = await Restaurant.findOne({ user: request.userId });
+
+    if (!restaurant) {
+      return response.status(404).json({ message: "Restaurant not found" });
+    }
+
+    const orders = await Order.find({ restaurant: restaurant._id })
+      .populate("restaurant")
+      .populate("user");
+
+    response.json(orders);
+  } catch (error) {
+    console.log(error);
+    response.status(500).json({ message: "Error fetching orders" });
+  }
+};
+
+const updateOrderStatus = async (request: Request, response: Response) => {
+  try {
+    const { orderId } = request.params;
+    const { status } = request.body;
+
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return response.status(404).json({ message: "Order not found" });
+    }
+
+    const restaurant = await Restaurant.findById(order.restaurant);
+
+    if (restaurant?.user?._id.toString() !== request.userId) {
+      return response.status(401).send();
+    }
+
+    order.status = status;
+    await order.save();
+
+    response.status(200).json(order);
+  } catch (error) {
+    console.log(error);
+    response.status(500).json({ message: "Error updating order status" });
+  }
+};
+
 const uploadImage = async (file: Express.Multer.File) => {
   const image = file;
   const base64Image = Buffer.from(image.buffer).toString("base64");
@@ -88,4 +135,10 @@ const uploadImage = async (file: Express.Multer.File) => {
   return uploadResponse.url;
 };
 
-export default { getMyRestaurant, createMyRestaurant, updateMyRestaurant };
+export default {
+  getMyRestaurant,
+  createMyRestaurant,
+  updateMyRestaurant,
+  getMyRestaurantOrders,
+  updateOrderStatus,
+};
